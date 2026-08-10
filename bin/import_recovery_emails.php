@@ -14,16 +14,31 @@
  * Si no encuentra esos encabezados, usa la 1ra y 2da columna por posición.
  *
  * Uso:
- *   php import_recovery_emails.php archivo.csv [--delimiter=,] [--dry-run] [--force]
+ *   php import_recovery_emails.php archivo.csv [--delimiter=,] [--dry-run] [--force] [--create-missing]
  *
- *   --dry-run   No escribe nada, solo muestra qué haría con cada fila.
- *   --force     Sobrescribe el correo de recuperación aunque la cuenta ya
- *               tenga uno cargado (por defecto esas filas se omiten).
- *   --delimiter Separador del CSV (por defecto se autodetecta , o ;).
+ *   --dry-run        No escribe nada, solo muestra qué haría con cada fila.
+ *   --force          Sobrescribe el correo de recuperación aunque la cuenta ya
+ *                    tenga uno cargado (por defecto esas filas se omiten).
+ *   --create-missing Si la cuenta no existe todavía en Roundcube (no inició
+ *                    sesión nunca), la da de alta igual que lo haría un
+ *                    primer login real (fila en 'users' + identidad por
+ *                    defecto), antes de cargarle el correo de recuperación.
+ *                    Pensado para altas masivas en el servidor de correo que
+ *                    todavía no tienen ningún login en el webmail.
+ *   --delimiter      Separador del CSV (por defecto se autodetecta , o ;).
  */
 
+// Capture the caller's original working directory BEFORE chdir()'ing into
+// the Roundcube install path below — otherwise a relative CSV path given on
+// the command line silently resolves against the wrong directory.
+$original_cwd = getcwd();
+
 define('INSTALL_PATH', '/usr/share/roundcube/');
-define('RCUBE_CONFIG_DIR', '/etc/roundcube/');
+// NOTE: pre-define RCMAIL_CONFIG_DIR (no trailing slash), not RCUBE_CONFIG_DIR
+// directly — iniset.php derives RCUBE_CONFIG_DIR from RCMAIL_CONFIG_DIR itself
+// and defines it unconditionally, so setting RCUBE_CONFIG_DIR here too would
+// trigger a "Constant already defined" warning.
+define('RCMAIL_CONFIG_DIR', '/etc/roundcube');
 chdir(INSTALL_PATH);
 require_once INSTALL_PATH . 'program/include/iniset.php';
 
@@ -31,7 +46,7 @@ function usage_and_exit($msg = null) {
     if ($msg) {
         fwrite(STDERR, "Error: $msg\n\n");
     }
-    fwrite(STDERR, "Uso: php import_recovery_emails.php archivo.csv [--delimiter=,] [--dry-run] [--force]\n");
+    fwrite(STDERR, "Uso: php import_recovery_emails.php archivo.csv [--delimiter=,] [--dry-run] [--force] [--create-missing]\n");
     exit(1);
 }
 
@@ -41,12 +56,15 @@ $csv_path = null;
 $delimiter = null;
 $dry_run = false;
 $force = false;
+$create_missing = false;
 
 foreach ($args as $arg) {
     if ($arg === '--dry-run') {
         $dry_run = true;
     } elseif ($arg === '--force') {
         $force = true;
+    } elseif ($arg === '--create-missing') {
+        $create_missing = true;
     } elseif (strpos($arg, '--delimiter=') === 0) {
         $delimiter = substr($arg, strlen('--delimiter='));
     } elseif ($arg[0] !== '-') {
@@ -58,6 +76,9 @@ foreach ($args as $arg) {
 
 if (!$csv_path) {
     usage_and_exit('falta la ruta del archivo CSV');
+}
+if ($csv_path[0] !== '/') {
+    $csv_path = $original_cwd . '/' . $csv_path;
 }
 if (!is_readable($csv_path)) {
     usage_and_exit("no se puede leer el archivo '$csv_path'");
@@ -108,6 +129,16 @@ function lookup_account($rcmail, $account) {
     return $db->fetch_assoc($result) ?: null;
 }
 
+// Same host format Roundcube stores in users.mail_host after a real login:
+// just the hostname, no scheme or port (e.g. 'tls://mail.x.com:143' -> 'mail.x.com').
+function resolve_imap_host($rcmail) {
+    $imap_host = $rcmail->config->get('imap_host');
+    $host = is_array($imap_host) ? reset($imap_host) : $imap_host;
+    $host = preg_replace('#^[a-z]+://#i', '', (string) $host);
+    $host = preg_replace('/:\d+$/', '', $host);
+    return $host ?: 'localhost';
+}
+
 // --- procesar CSV ---
 $fh = fopen($csv_path, 'r');
 $header = fgetcsv($fh, 0, $delimiter);
@@ -144,8 +175,33 @@ while (($row = fgetcsv($fh, 0, $delimiter)) !== false) {
     }
 
     $match = lookup_account($rcmail, $account);
+    $created_account = false;
+
+    if (!$match && $create_missing) {
+        if (!rcube_utils::check_email($account)) {
+            echo "Fila $row_num [$account]: ERROR - la cuenta no es un email válido, no se puede dar de alta\n";
+            $stats['errores']++;
+            continue;
+        }
+
+        if ($dry_run) {
+            echo "Fila $row_num [$account]: SE DARÍA DE ALTA la cuenta en Roundcube\n";
+            $match = ['username' => $account, 'email' => $account]; // simulate for the rest of the dry-run
+        } else {
+            $imap_host = resolve_imap_host($rcmail);
+            $new_user = rcube_user::create($account, $imap_host);
+            if (!$new_user || !$new_user->ID) {
+                echo "Fila $row_num [$account]: ERROR - no se pudo dar de alta la cuenta en Roundcube\n";
+                $stats['errores']++;
+                continue;
+            }
+            $match = lookup_account($rcmail, $account);
+            $created_account = true;
+        }
+    }
+
     if (!$match) {
-        echo "Fila $row_num [$account]: ERROR - la cuenta no existe en Roundcube\n";
+        echo "Fila $row_num [$account]: ERROR - la cuenta no existe en Roundcube" . (!$create_missing ? " (usar --create-missing para darla de alta)" : '') . "\n";
         $stats['errores']++;
         continue;
     }
@@ -193,7 +249,7 @@ while (($row = fgetcsv($fh, 0, $delimiter)) !== false) {
     // not using affected_rows(): MySQL's ON DUPLICATE KEY UPDATE reports 0
     // rows affected when the new value equals the existing one.
     if (!$db->is_error()) {
-        echo "Fila $row_num [$account]: OK -> $recovery\n";
+        echo "Fila $row_num [$account]: OK" . ($created_account ? " (cuenta dada de alta)" : '') . " -> $recovery\n";
         $stats['ok']++;
     } else {
         echo "Fila $row_num [$account]: ERROR - no se pudo guardar (" . $db->is_error() . ")\n";

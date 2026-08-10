@@ -233,6 +233,29 @@ php bin/import_recovery_emails.php accounts.csv --dry-run   # preview
 php bin/import_recovery_emails.php accounts.csv             # apply
 ```
 
+It's safe to re-run against accounts you've already imported — existing
+recovery emails are left alone unless you pass `--force`:
+
+| Situation | Without `--force` | With `--force` |
+|---|---|---|
+| Account doesn't exist, no `--create-missing` | Error | Error |
+| Account doesn't exist, with `--create-missing` | Creates it + sets the email | Creates it + sets the email |
+| Account exists, no recovery email set yet | Sets it | Sets it |
+| Account exists, already has a recovery email | Skipped | Overwritten |
+
+**Bulk-provisioning new mailboxes**: Roundcube only creates its own
+`users`/`identities` rows the first time someone actually logs in — it has
+no idea an account exists on the mail server otherwise. If you're creating
+many mailboxes on vpopmail at once and don't want to log into each one just
+so recovery works, add `--create-missing`: for any account in the CSV that
+Roundcube doesn't know about yet, it creates the user and a default identity
+(exactly what a real first login would do) before setting the recovery
+email — one pass instead of one login per account:
+
+```bash
+php bin/import_recovery_emails.php accounts.csv --create-missing
+```
+
 ## Screenshots
 
 **Recovery link on the login screen**

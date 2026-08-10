@@ -242,6 +242,31 @@ php bin/import_recovery_emails.php cuentas.csv --dry-run   # previsualizar
 php bin/import_recovery_emails.php cuentas.csv             # aplicar
 ```
 
+Es seguro volver a correrlo sobre cuentas que ya importaste antes — el
+correo de recuperación que ya tengan cargado se respeta, salvo que uses
+`--force`:
+
+| Situación | Sin `--force` | Con `--force` |
+|---|---|---|
+| La cuenta no existe, sin `--create-missing` | Error | Error |
+| La cuenta no existe, con `--create-missing` | La crea + carga el correo | La crea + carga el correo |
+| La cuenta existe, sin recovery cargado todavía | Lo carga | Lo carga |
+| La cuenta existe, ya tiene un recovery cargado | Se omite | Se sobrescribe |
+
+**Alta masiva de casillas nuevas**: Roundcube recién crea sus propias filas
+en `users`/`identities` la primera vez que alguien inicia sesión de verdad —
+no tiene idea de que una cuenta existe en el servidor de correo hasta
+entonces. Si estás dando de alta muchas casillas en vpopmail de una y no
+querés tener que loguearte en cada una solo para que funcione la
+recuperación, agregá `--create-missing`: para cada cuenta del CSV que
+Roundcube todavía no conoce, crea el usuario y una identidad por defecto
+(exactamente lo que haría un primer login real) antes de cargarle el correo
+de recuperación — una sola pasada en vez de un login por cuenta:
+
+```bash
+php bin/import_recovery_emails.php cuentas.csv --create-missing
+```
+
 ## Capturas de pantalla
 
 **Link de recuperación en el login**
