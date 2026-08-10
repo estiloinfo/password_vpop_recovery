@@ -1,0 +1,61 @@
+<?php
+
+// This adaptation stores its data in Roundcube's OWN database (no separate
+// DB connection needed, so pr_db_dsn is intentionally left unset). Create
+// these tables there first — see README.md for the full CREATE TABLE
+// statements and installation steps.
+$config['pr_users_table'] = 'password_recovery_data';
+
+// Only the alternate/recovery email method is used (no secret question, no
+// SMS) — map the plugin's 'altemail' field to the actual column name.
+$config['pr_fields'] = [
+    'altemail' => 'alt_email',
+];
+
+// Reference address only; no longer used for automatic admin notifications
+// (see README.md: "What this adaptation deliberately does NOT have").
+$config['pr_admin_email'] = 'postmaster@your.domain.com';
+
+// Sender / reply-to for the confirmation-code emails.
+$config['pr_replyto_email'] = 'postmaster@your.domain.com';
+
+// Verification method: confirmation code by alternate email only.
+$config['pr_use_question'] = false;
+$config['pr_use_confirm_code'] = true;
+
+// Confirmation code settings
+$config['pr_confirm_code_length'] = 6;
+$config['pr_confirm_code_count_max'] = 3;
+$config['pr_confirm_code_validity_time'] = 30; // minutes
+
+// The password change is always delegated to the 'password' plugin.
+$config['pr_use_password_plugin'] = true;
+$config['pr_password_minimum_length'] = 8;
+$config['pr_password_minimum_score'] = 1;
+
+// Required ONLY when password_driver = 'vpopmaild': a vpopmail domain-admin
+// account, used to reset OTHER users' passwords. vpopmaild requires
+// authenticating before it allows a change, and a plain self-login can't
+// work here — the whole point of recovery is that the user doesn't know
+// their current password. See README.md, "vpopmail admin account".
+$config['pr_vpopmaild_admin_user'] = 'postmaster@your.domain.com';
+$config['pr_vpopmaild_admin_pass'] = 'CHANGEME';
+
+// Dedicated SEND-ONLY SMTP account used to email the confirmation code
+// BEFORE login (at that point there's no IMAP session yet, so the main
+// smtp_user/smtp_pass = '%u'/'%p' can't be reused). Point this at your real
+// SMTP relay with proper SPF/DKIM, not an unauthenticated local relay.
+$config['pr_default_smtp_server'] = 'ssl://smtp.your.domain.com:465';
+$config['pr_default_smtp_user']   = 'noreply@your.domain.com';
+$config['pr_default_smtp_pass']   = 'CHANGEME';
+
+// Real, DB-backed rate limiting (independent of session/cookies).
+$config['pr_recovery_attempts_table'] = 'password_recovery_attempts';
+$config['pr_rate_limit_account_per_day'] = 5;
+$config['pr_rate_limit_ip_per_day'] = 20;
+
+// Logging
+$config['pr_password_log'] = true;
+$config['pr_debug'] = false;
+
+?>

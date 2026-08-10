@@ -1,0 +1,67 @@
+<?php
+
+$labels['forgot_password']          = '¿Olvidó su contraseña?';
+$labels['recovery_password']        = 'Recuperar contraseña';
+$labels['phone']                    = 'Teléfono';
+$labels['altemail']                 = 'Correo electrónico de recuperación';
+$labels['account_email']            = 'Correo electrónico';
+$labels['newpassword']              = 'Nueva contraseña';
+$labels['newpassword_confirm']      = 'Confirmación';
+$labels['code']                     = 'Código de confirmación';
+$labels['question']                 = 'Pregunta secreta';
+$labels['answer']                   = 'Respuesta a la pregunta secreta';
+$labels['answer_confirm']           = 'Confirmación';
+$labels['recovery']                 = 'Recuperar';
+$labels['save']                     = 'Guardar';
+$labels['cancel']                   = 'Cancelar';
+$labels['email_subject']            = 'Restablecer el acceso al correo';
+$labels['email_subject_admin']      = 'Solicitud de recuperación de contraseña';
+$labels['click_here']               = 'Haga clic aquí';
+$labels['no_identities']            = 'Complete la información necesaria para la recuperación de contraseña.';
+$labels['no_username']              = 'Ingrese su nombre de usuario (dirección de correo)';
+$labels['no_altemail']              = 'Ingrese su correo electrónico alternativo';
+$labels['renew_code']               = 'Enviar un nuevo código de confirmación';
+$labels['count_send_code_maximum']  = 'Se superó la cantidad máxima de envíos del código de confirmación';
+$labels['no_code']                  = 'Ingrese el código de confirmación';
+$labels['no_answer']                = 'Ingrese la respuesta secreta';
+$labels['no_password']              = 'Ingrese la nueva contraseña';
+$labels['no_password_confirm']      = 'Ingrese la confirmación de la contraseña';
+$labels['password_inconsistency']   = 'La contraseña y la confirmación no coinciden';
+$labels['password_too_short']       = 'La contraseña debe tener al menos %d caracteres.';
+$labels['password_too_long']        = 'La contraseña debe tener como máximo %d caracteres.';
+$labels['policy_length']            = 'Entre %d y %d caracteres';
+$labels['policy_digit']             = 'Al menos un número';
+$labels['policy_special']           = 'Al menos un carácter especial';
+$labels['policy_match']             = 'Las contraseñas coinciden';
+
+$messages['disabled']               = 'El sistema está en mantenimiento y la recuperación de contraseña no está disponible por el momento. Disculpe las molestias.';
+$messages['banned']                 = 'El acceso está bloqueado temporalmente (demasiados intentos fallidos). Intente nuevamente más tarde o contacte al administrador.';
+$messages['no_identities']          = 'No hay configurados los datos necesarios para la recuperación de contraseña. %s y configúrelos.';
+$messages['user_not_found']         = 'Usuario no encontrado';
+$messages['check_account_notice']   = 'El código de recuperación ya fue enviado. Revise su correo alternativo.';
+$messages['check_account']          = 'Se envió un código de recuperación de contraseña ';
+$messages['check_email']            = 'a su correo electrónico alternativo';
+$messages['check_sms']              = 'al teléfono';
+$messages['and']                    = 'y ';
+$messages['sent_to_admin']          = 'No se encontró información de recuperación, por lo que su solicitud fue enviada al administrador.';
+$messages['no_recovery_data']       = 'Esta cuenta no tiene configurado un correo electrónico alternativo, por lo que la recuperación automática de contraseña no está disponible. Contacte al administrador.';
+$messages['check_account_generic']  = 'Si los datos ingresados son correctos, en breve vas a recibir un correo con el código de confirmación en tu casilla alternativa. Revisá también la carpeta de spam.';
+$messages['send_failed']            = 'Error al enviar el código de recuperación. Intente nuevamente más tarde.';
+$messages['write_failed']           = 'Error al guardar los datos. Contacte al administrador.';
+$messages['code_expired']           = 'El código de confirmación expiró';
+$messages['code_failed']            = 'Código de confirmación inválido';
+$messages['answer_failed']          = 'Respuesta incorrecta a la pregunta secreta';
+$messages['password_invalid']       = 'Contraseña inválida';
+$messages['password_check_failed']  = 'Error. ¡La contraseña es demasiado simple!';
+$messages['password_forbidden']     = 'La contraseña contiene caracteres no permitidos';
+$messages['password_changed']       = '¡Contraseña cambiada con éxito!';
+$messages['password_not_changed']   = 'Ocurrió un error al cambiar la contraseña. Intente nuevamente más tarde o contacte al administrador.';
+$messages['crypt_error']            = 'No se puede guardar la nueva contraseña. Falta la función criptográfica.';
+$messages['connect_error']          = 'No se puede guardar la nueva contraseña. Error de conexión.';
+$messages['password_in_history']    = 'Esta contraseña ya fue utilizada anteriormente.';
+$messages['password_const_viol']    = 'La contraseña no cumple con los requisitos. Puede ser demasiado débil.';
+$messages['phone_invalid']          = '¡Número de teléfono incorrecto! Debe tener %d dígitos';
+$messages['altemail_invalid']       = '¡El correo electrónico alternativo es incorrecto!';
+$messages['altemail_match_primary'] = '¡El correo electrónico alternativo no puede ser igual al correo principal!';
+
+?>
