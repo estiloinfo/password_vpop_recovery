@@ -203,8 +203,6 @@ php bin/import_recovery_emails.php accounts.csv             # apply
 
 ## Screenshots
 
-*(pending: add the images under `docs/` with these filenames)*
-
 **Recovery link on the login screen**
 !["Forgot password?" link](docs/login-link.png)
 

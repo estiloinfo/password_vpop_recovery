@@ -208,8 +208,6 @@ php bin/import_recovery_emails.php cuentas.csv             # aplicar
 
 ## Capturas de pantalla
 
-*(pendiente: agregar las imágenes en `docs/` con estos nombres)*
-
 **Link de recuperación en el login**
 ![Link "¿Olvidó su contraseña?"](docs/login-link.png)
 
