@@ -1,4 +1,4 @@
-# Password Recovery — FAPyD Webmail
+# Password Recovery — Roundcube
 
 *[English version (README.md)](README.md)*
 
@@ -15,7 +15,7 @@ y política de contraseña con feedback visual.
 
 1. En la pantalla de login, el usuario hace clic en **"¿Olvidó su
    contraseña?"**.
-2. Se le pide **la cuenta institucional** (`usuario@fapyd.unr.edu.ar`) **y**
+2. Se le pide **la cuenta institucional** (`usuario@tu-dominio.com`) **y**
    el **correo electrónico de recuperación** que haya cargado antes en
    Configuración → Identidades.
 3. Si ambos datos coinciden con lo que hay cargado, se envía un código de 6
@@ -155,7 +155,7 @@ diga explícitamente lo contrario, y no es lo que queremos para
 `slogin` propio no alcanza, porque en recuperación el usuario justamente no
 tiene la contraseña anterior. La solución es autenticarse con una cuenta que
 tenga **privilegios de administrador de dominio** en vpopmail (por ejemplo
-`postmaster@fapyd.unr.edu.ar`), que sí puede ejecutar `mod_user` sobre
+`postmaster@tu-dominio.com`), que sí puede ejecutar `mod_user` sobre
 *cualquier* cuenta del dominio.
 
 Si esa cuenta no existe todavía, hay que crearla/habilitarla en el servidor

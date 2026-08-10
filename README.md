@@ -1,4 +1,4 @@
-# Password Recovery — FAPyD Webmail
+# Password Recovery — Roundcube
 
 *[Versión en español (README.es.md)](README.es.md)*
 
@@ -15,7 +15,7 @@ limiting, and a password policy with live visual feedback.
 
 1. On the login screen, the user clicks **"Forgot password?"**.
 2. They're asked for **both** their institutional account
-   (`user@fapyd.unr.edu.ar`) **and** the recovery email address they set
+   (`user@your.domain.com`) **and** the recovery email address they set
    earlier under Settings → Identities.
 3. If both match what's on file, a 6-digit code is sent to that recovery
    address (valid for 30 minutes).
@@ -150,7 +150,7 @@ which is not what we want for `token_validity`/`created_at`.)
 self-`slogin` isn't enough, because during recovery the user by definition
 doesn't have their old password. The fix is to authenticate with an account
 that has **domain-admin privileges** in vpopmail (e.g.
-`postmaster@fapyd.unr.edu.ar`), which *can* run `mod_user` against *any*
+`postmaster@your.domain.com`), which *can* run `mod_user` against *any*
 account in the domain.
 
 If that account doesn't exist yet, it needs to be created/enabled on the
