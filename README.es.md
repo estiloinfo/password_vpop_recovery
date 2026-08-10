@@ -81,6 +81,22 @@ Estos pasos asumen un Roundcube ya funcionando con:
 Agregar `'password_vpop_recovery'` a `$config['plugins']` en
 `/etc/roundcube/config.inc.php`.
 
+**En Roundcube instalado por paquete Debian/Ubuntu (Debian 12+
+`roundcube-core`) hace falta un paso extra**: el cargador de plugins en
+realidad lee de `/var/lib/roundcube/plugins/`, no directamente de
+`/usr/share/roundcube/plugins/` — cada plugin que trae el paquete es un
+symlink ahí. Sin esto el plugin falla al cargar con
+`Failed to load plugin file ...` y, si ese error pasa en cada página, se
+rompe todo el webmail, no solo la recuperación:
+
+```bash
+ln -s /usr/share/roundcube/plugins/password_vpop_recovery /var/lib/roundcube/plugins/password_vpop_recovery
+```
+
+(En instalaciones donde `plugins/` no es un directorio de symlinks — por
+ejemplo Roundcube instalado desde el código fuente en vez de con `.deb` —
+este paso no aplica.)
+
 ### 2. Crear las tablas en la base de Roundcube
 
 El plugin **no usa una base aparte**: guarda sus datos en la misma base que
@@ -156,10 +172,25 @@ correcto el correo termina en spam o rebota).
 
 ### 5. Configurar `config.inc.php` del plugin
 
+En Roundcube instalado por paquete Debian/Ubuntu, el `config.inc.php` de
+cada plugin bajo `/usr/share/roundcube/plugins/<nombre>/` es en realidad un
+symlink a un archivo real bajo `/etc/roundcube/plugins/<nombre>/` — fijate
+en cualquier plugin del core (por ejemplo `password`) y vas a ver el mismo
+patrón. Así el config específico de este servidor queda en `/etc` (sobrevive
+a actualizaciones del paquete) en vez de bajo `/usr/share` (que administra el
+gestor de paquetes). Seguimos la misma convención acá:
+
 ```bash
-cd /usr/share/roundcube/plugins/password_vpop_recovery
-cp config.inc.php.dist config.inc.php   # si no existe todavía
+mkdir -p /etc/roundcube/plugins/password_vpop_recovery
+cp /usr/share/roundcube/plugins/password_vpop_recovery/config.inc.php.dist \
+   /etc/roundcube/plugins/password_vpop_recovery/config.inc.php
+ln -s /etc/roundcube/plugins/password_vpop_recovery/config.inc.php \
+      /usr/share/roundcube/plugins/password_vpop_recovery/config.inc.php
 ```
+
+(Si no es una instalación por paquete Debian, no hay problema en dejar
+`config.inc.php` directo dentro de la carpeta del plugin — se salta el
+symlink y se edita ahí nomás.)
 
 Completar como mínimo:
 
@@ -174,16 +205,21 @@ Completar como mínimo:
 | `pr_confirm_code_validity_time` | minutos de validez del código (default 30) |
 
 **Importante — permisos**: este archivo contiene contraseñas en texto plano
-(la del SMTP y la del admin de vpopmail). Debe quedar con el mismo esquema de
-permisos que el resto de la configuración sensible de Roundcube:
+(la del SMTP y la del admin de vpopmail). Aplicá esto sobre el archivo REAL
+(el de `/etc/roundcube/plugins/...` si seguiste el enfoque del symlink de
+arriba — el symlink en sí no necesita permisos especiales, solo apunta ahí):
 
 ```bash
-chown root:www-data config.inc.php
-chmod 640 config.inc.php
+chown root:www-data /etc/roundcube/plugins/password_vpop_recovery/config.inc.php
+chmod 640 /etc/roundcube/plugins/password_vpop_recovery/config.inc.php
 ```
 
 (`www-data` es el usuario con el que corre PHP-FPM/nginx en esta
-instalación — ajustar si el servidor web corre con otro usuario.)
+instalación — ajustar si el servidor web corre con otro usuario. Ojo que
+esto es más estricto que el default de Debian para el resto de los plugins,
+que vienen `644 root:root` — legible por cualquiera. Está bien para configs
+sin secretos, pero este archivo tiene contraseñas reales, así que vale la
+pena la excepción.)
 
 ⚠️ Cada vez que se edite este archivo con un editor que reescriba el fichero
 entero, conviene volver a chequear el dueño/grupo — algunas herramientas de
