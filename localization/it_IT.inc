@@ -30,9 +30,9 @@ $labels['password_inconsistency']   = 'La password e la conferma non corrispondo
 $labels['password_too_short']       = 'La password deve essere lunga almeno %d caratteri.';
 $labels['password_too_long']        = 'La password non deve contenere più di %d ccaratteri.';
 $labels['policy_length']            = 'Tra %d e %d caratteri';
-$labels['policy_digit']             = 'Almeno un numero';
-$labels['policy_special']           = 'Almeno un carattere speciale';
-$labels['policy_match']             = 'Le password corrispondono';
+$labels['policy_digit']             = 'La password deve contenere almeno un numero';
+$labels['policy_special']           = 'La password deve contenere almeno un carattere speciale';
+$labels['policy_match']             = 'Le password devono corrispondere';
 
 $messages['disabled']               = 'Il sistema è al momento in manutenzione e il recupero della password non è possibile. Tutto tornerà alla normalità a breve. Ci scusiamo per l\'inconveniente.';
 $messages['banned']                 = 'L\'accesso è temporaneamente bloccato (troppi tentativi di accesso falliti). Per favore riprova più tardi o contatta l\'amministratore.';
