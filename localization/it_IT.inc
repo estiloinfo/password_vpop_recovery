@@ -1,0 +1,67 @@
+<?php
+
+$labels['forgot_password']          = 'Password dimenticata?';
+$labels['recovery_password']        = 'Recupero della password';
+$labels['phone']                    = 'Telefono';
+$labels['altemail']                 = 'E-mail per il recupero';
+$labels['account_email']            = 'Indirizzo e-mail';
+$labels['newpassword']              = 'Nuova password';
+$labels['newpassword_confirm']      = 'Conferma';
+$labels['code']                     = 'Codice di conferma';
+$labels['question']                 = 'Domanda segreta';
+$labels['answer']                   = 'Rispondi a una domanda segreta';
+$labels['answer_confirm']           = 'Conferma';
+$labels['recovery']                 = 'Recupero';
+$labels['save']                     = 'Salva';
+$labels['cancel']                   = 'Cancella';
+$labels['email_subject']            = 'Recupero dell\'accesso alla casella di posta';
+$labels['email_subject_admin']      = 'Richiesta di recupero della password';
+$labels['click_here']               = 'Clicca qui';
+$labels['no_identities']            = 'Completa le informazioni per il recupero della password.';
+$labels['no_username']              = 'Inserire il nome utente (indirizzo e-mail)';
+$labels['no_altemail']              = 'Inserire il proprio indirizzo e-mail alternativo';
+$labels['renew_code']               = 'Invia un nuovo codice di conferma';
+$labels['count_send_code_maximum']  = 'E\' stato superato il numero massimo di invii di codici di conferma.';
+$labels['no_code']                  = 'Inserire il codice di conferma';
+$labels['no_answer']                = 'Inserire una risposta segreta';
+$labels['no_password']              = 'Inserire una nuova password';
+$labels['no_password_confirm']      = 'Confermare la password';
+$labels['password_inconsistency']   = 'La password e la conferma non corrispondono';
+$labels['password_too_short']       = 'La password deve essere lunga almeno %d caratteri.';
+$labels['password_too_long']        = 'La password non deve contenere più di %d ccaratteri.';
+$labels['policy_length']            = 'Tra %d e %d caratteri';
+$labels['policy_digit']             = 'Almeno un numero';
+$labels['policy_special']           = 'Almeno un carattere speciale';
+$labels['policy_match']             = 'Le password corrispondono';
+
+$messages['disabled']               = 'Il sistema è al momento in manutenzione e il recupero della password non è possibile. Tutto tornerà alla normalità a breve. Ci scusiamo per l\'inconveniente.';
+$messages['banned']                 = 'L\'accesso è temporaneamente bloccato (troppi tentativi di accesso falliti). Per favore riprova più tardi o contatta l\'amministratore.';
+$messages['no_identities']          = 'Le impostazioni per il recupero della password non sono state configurate. %s e configura!';
+$messages['user_not_found']         = 'Utente non trovato';
+$messages['check_account_notice']   = 'Il codice per il recupero della password ti è stato già inviato. Controlla la tua e-mail';
+$messages['check_account']          = 'Ti è stato inviato il codice per recupero della password ';
+$messages['check_email']            = 'a un indirizzo e-mail aggiuntivo ';
+$messages['check_sms']              = 'per telefono ';
+$messages['and']                    = 'e ';
+$messages['sent_to_admin']          = 'Non è stata trovata alcuna informazione per il recupero della password, pertanto la tua richiesta è stata inviata all\'amministratore.';
+$messages['no_recovery_data']       = 'Non è stato configurato alcun indirizzo alternativo per questo account, pertanto il recupero automatico della password non è possibile. Per favore contatta l\'amministratore.';
+$messages['check_account_generic']  = 'Se le informazioni inserite sono corrette, riceverai a breve una e-mail con un codice di conferma al tuo indirizzo di posta alternativo. Controlla anche nella cartella spam.';
+$messages['send_failed']            = 'Errore nell\'invio del codice per il recupero della password. Riprova più tardi.';
+$messages['write_failed']           = 'Errore nella scrittura dei dati. Contattare l\'amministratore.';
+$messages['code_expired']           = 'Il codice di conferma è scaduto';
+$messages['code_failed']            = 'Codice di conferma non valido';
+$messages['answer_failed']          = 'Risposta sbagliata alla domanda segreta';
+$messages['password_invalid']       = 'Password non valida';
+$messages['password_check_failed']  = 'Errore. La password è troppo semplice!';
+$messages['password_forbidden']     = 'La password contiene caratteri non validi';
+$messages['password_changed']       = 'La password è stata cambiata con successo!';
+$messages['password_not_changed']   = 'E\' avvenuto un errore durante il cambio della password. Per favore riprova più tardi o contatta l\'amministratore.';
+$messages['crypt_error']            = 'Non è possibile salvare la nuova password. Funzione crittografica mancante.';
+$messages['connect_error']          = 'Non è possibile salvare la nuova password. Errore di connessione.';
+$messages['password_in_history']    = 'Questa password è già stata usata.';
+$messages['password_const_viol']    = 'Violazione della restrizione della password. La password potrebbe essere troppo debole.';
+$messages['phone_invalid']          = 'Il numero di telefono non è valido! Il numero deve avere almeno %d cifre';
+$messages['altemail_invalid']       = 'L\'indirizzo e-mail alternativo non è corretto!';
+$messages['altemail_match_primary'] = 'L\'indirizzo e-mail alternativo non deve essere uguale a quello principale!';
+
+?>
