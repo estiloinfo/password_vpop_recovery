@@ -13,7 +13,7 @@ class password_vpop_recovery_send {
     }
 
     // Send E-Mail
-    function send_email($to, $from, $subject, $body) {
+    function send_email($to, $from, $subject, $body, $smtp_account = null) {
         $ctb = md5(rand() . microtime());
         $subject = "=?UTF-8?B?".base64_encode($subject)."?=";
 
@@ -56,9 +56,10 @@ class password_vpop_recovery_send {
         }
 
         if($this->rc->config->get('smtp_pass') == "%p") {
-            $this->rc->config->set('smtp_server', $this->rc->config->get('pr_default_smtp_server'));
-            $this->rc->config->set('smtp_user', $this->rc->config->get('pr_default_smtp_user'));
-            $this->rc->config->set('smtp_pass', $this->rc->config->get('pr_default_smtp_pass'));
+            $account = $smtp_account ?: ['server' => $this->rc->config->get('pr_default_smtp_server'), 'user' => '', 'pass' => ''];
+            $this->rc->config->set('smtp_server', $account['server']);
+            $this->rc->config->set('smtp_user', $account['user']);
+            $this->rc->config->set('smtp_pass', $account['pass']);
         }
 
         $this->rc->smtp->connect();
@@ -93,7 +94,8 @@ class password_vpop_recovery_send {
                     $this->user['altemail'],
                     $from,
                     $subject,
-                    $body
+                    $body,
+                    $this->pr->resolve_smtp_account($this->user['username'])
                 );
             }
 
