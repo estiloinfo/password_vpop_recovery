@@ -189,13 +189,18 @@ when it doesn't apply:
   credentials, or you'd simply rather not reuse that password for SMTP;
 - **`smtp_auth => false`** — this domain's relay accepts mail unauthenticated
   (only if your MTA setup genuinely allows it and has proper SPF/DKIM —
-  otherwise the mail ends up in spam or gets bounced). In this case the
-  From/Reply-To address also defaults to `noreply@<domain>` instead of the
-  global `pr_replyto_email` — an unauthenticated local relay commonly only
-  accepts mail `FROM` its own domain, so a cross-domain reply-to would get
-  rejected. Override it with `'from'` if you need something else;
+  otherwise the mail ends up in spam or gets bounced);
 - **`smtp_server`** — this domain's relay is a different host from the
   shared `pr_default_smtp_server`.
+
+The From/Reply-To address follows its own precedence, independent of the
+above: an explicit `'from'` for that domain, else that domain's own
+`smtp_user` if it has one (already a real address there), else
+`pr_replyto_email` (just the LOCAL PART, default `'noreply'`) combined with
+**the domain being recovered** — not a single fixed address, since a
+cross-domain reply-to commonly gets rejected by an unauthenticated relay
+and hurts SPF/DKIM anyway. Set `pr_replyto_email` to a full address
+(containing `@`) instead if you genuinely want one fixed address everywhere.
 
 ### 5. Configure the plugin's `config.inc.php`
 
@@ -228,9 +233,12 @@ Fill in at least:
 
 | Variable | What it is |
 |---|---|
-| `pr_replyto_email` | sender address for the confirmation-code emails |
 | `pr_default_smtp_server` | shared SMTP relay for domains that don't override it |
 | `pr_domains` | one entry per mail domain, see below |
+
+`pr_replyto_email` already defaults to `'noreply'` (see "Sending (SMTP)
+account" above for how it combines with the recovered domain) — only set it
+if that default doesn't work for you.
 
 **Multi-domain configuration (`pr_domains`)** — one entry per domain this
 install serves:
@@ -243,12 +251,11 @@ $config['pr_domains'] = [
     'other.domain.com' => [
         'vpopmaild_admin_pass' => 'CHANGEME',
         'smtp_auth' => false,                   // this domain's relay needs no auth
-        // 'from' defaults to noreply@other.domain.com here; set it
-        // explicitly to override (works for any domain, not just this case)
+        // From defaults to noreply@other.domain.com (no smtp_user set here)
     ],
     'third.domain.com' => [
         'vpopmaild_admin_pass' => 'CHANGEME',
-        'smtp_user'   => 'alerts@thirdparty.example', // dedicated sending account
+        'smtp_user'   => 'alerts@thirdparty.example', // also used as From
         'smtp_pass'   => 'CHANGEME',
         'smtp_server' => 'smtp.thirdparty.example:587',
     ],

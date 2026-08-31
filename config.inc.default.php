@@ -79,6 +79,16 @@ $config['pr_sql_store_clear'] = false;
 // (only if your relay allows it) unless overridden per domain.
 $config['pr_smtp_auth_default'] = true;
 
+// From/Reply-To address for the confirmation-code email. This is just the
+// LOCAL PART (default 'noreply'), not a full address - it gets combined
+// with the domain being recovered (<local-part>@<domain>) unless a domain
+// sets its own 'from' or 'smtp_user' in pr_domains. A single fixed address
+// hardcoded to one domain would commonly get rejected by another domain's
+// unauthenticated relay and hurts SPF/DKIM anyway. If this DOES contain
+// '@' it's used as-is everywhere instead, for installs that genuinely want
+// one fixed address.
+$config['pr_replyto_email'] = 'noreply';
+
 // Real, DB-backed rate limiting (independent of session/cookies).
 $config['pr_recovery_attempts_table'] = 'password_recovery_attempts';
 $config['pr_rate_limit_account_per_day'] = 5;

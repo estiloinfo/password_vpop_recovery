@@ -632,36 +632,41 @@ class password_vpop_recovery extends rcube_plugin {
     //   4. default: authenticate as that domain's own postmaster@<domain>,
     //      reusing its vpopmaild admin password (pr_smtp_auth_default)
     // An empty 'user' in the result means: connect without authenticating.
-    // 'from' is normally left null (caller falls back to the global
-    // pr_replyto_email/pr_admin_email) unless pr_domains[domain]['from'] is
-    // set, EXCEPT for the unauthenticated cases (2 and the final fallback),
-    // where it defaults to noreply@<domain> - an unauthenticated local relay
-    // commonly only accepts mail FROM its own domain, so the global reply-to
-    // (which may belong to a different domain entirely) would get rejected.
+    // 'from' precedence: pr_domains[domain]['from'] (explicit, full address)
+    // > that domain's own smtp_user, if set (already a real address in that
+    // domain) > pr_replyto_email + '@' + domain being recovered. A cross-
+    // domain fixed reply-to (or one hardcoded to a single domain) commonly
+    // gets rejected by an unauthenticated relay and hurts SPF/DKIM anyway,
+    // so pr_replyto_email is deliberately just a LOCAL PART (e.g. 'noreply'),
+    // not a full address - if it does contain '@' it's used as-is instead,
+    // for installs that genuinely want one fixed address everywhere.
     function resolve_smtp_account($username) {
         $domain = strtolower(substr(strrchr($username, '@'), 1));
         $entry  = $this->rc->config->get('pr_domains', [])[$domain] ?? [];
         $server = $entry['smtp_server'] ?? $this->rc->config->get('pr_default_smtp_server');
-        $from   = $entry['from'] ?? null;
+
+        $replyto = $this->rc->config->get('pr_replyto_email', 'noreply');
+        $default_from = (strpos($replyto, '@') !== false) ? $replyto : ($replyto . '@' . $domain);
+        $from = $entry['from'] ?? null;
 
         if (!empty($entry['smtp_user'])) {
-            return ['server' => $server, 'user' => $entry['smtp_user'], 'pass' => $entry['smtp_pass'] ?? '', 'from' => $from];
+            return ['server' => $server, 'user' => $entry['smtp_user'], 'pass' => $entry['smtp_pass'] ?? '', 'from' => $from ?: $entry['smtp_user']];
         }
 
         if (isset($entry['smtp_auth']) && $entry['smtp_auth'] === false) {
-            return ['server' => $server, 'user' => '', 'pass' => '', 'from' => $from ?: ('noreply@' . $domain)];
+            return ['server' => $server, 'user' => '', 'pass' => '', 'from' => $from ?: $default_from];
         }
 
         if ($global_user = $this->rc->config->get('pr_default_smtp_user')) {
-            return ['server' => $server, 'user' => $global_user, 'pass' => $this->rc->config->get('pr_default_smtp_pass'), 'from' => $from];
+            return ['server' => $server, 'user' => $global_user, 'pass' => $this->rc->config->get('pr_default_smtp_pass'), 'from' => $from ?: $default_from];
         }
 
         if ($this->rc->config->get('pr_smtp_auth_default', true)) {
             $admin = $this->resolve_vpopmaild_admin($username);
-            return ['server' => $server, 'user' => $admin['user'], 'pass' => $admin['pass'], 'from' => $from];
+            return ['server' => $server, 'user' => $admin['user'], 'pass' => $admin['pass'], 'from' => $from ?: $default_from];
         }
 
-        return ['server' => $server, 'user' => '', 'pass' => '', 'from' => $from ?: ('noreply@' . $domain)];
+        return ['server' => $server, 'user' => '', 'pass' => '', 'from' => $from ?: $default_from];
     }
 
     function get_action() {
