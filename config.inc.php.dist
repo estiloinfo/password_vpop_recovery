@@ -5,13 +5,6 @@
 // over) - this file only needs what's specific to YOUR install: secrets and
 // per-domain overrides.
 
-// Reference address only; no longer used for automatic admin notifications
-// (see README.md: "What this adaptation deliberately does NOT have").
-$config['pr_admin_email'] = 'postmaster@your.domain.com';
-
-// Sender / reply-to for the confirmation-code emails.
-$config['pr_replyto_email'] = 'postmaster@your.domain.com';
-
 // Shared SMTP relay used to send confirmation-code emails, for every domain
 // that doesn't override 'smtp_server' in pr_domains below.
 $config['pr_default_smtp_server'] = 'ssl://smtp.your.domain.com:465';
@@ -30,11 +23,12 @@ $config['pr_default_smtp_server'] = 'ssl://smtp.your.domain.com:465';
 //   'smtp_user' / 'smtp_pass' - use a different, dedicated sending account
 //   'smtp_auth' => false      - this domain's relay accepts mail unauthenticated
 //   'smtp_server'             - this domain's relay is a different host
-//   'from'                    - override the From/Reply-To address (default:
-//                                pr_replyto_email, EXCEPT when smtp_auth is
-//                                false, where it defaults to noreply@<domain>
-//                                instead - an unauthenticated relay commonly
-//                                only accepts mail FROM its own domain)
+//   'from'                    - override the From/Reply-To address entirely
+//
+// From/Reply-To defaults to '<smtp_user>' if that domain has one configured,
+// otherwise '<pr_replyto_email>@<this domain>' (pr_replyto_email defaults to
+// 'noreply' - see config.inc.default.php). Set 'from' explicitly only when
+// neither of those is right for a given domain.
 //
 // See README.md, "Multi-domain configuration", for the full precedence order.
 $config['pr_domains'] = [
@@ -47,7 +41,7 @@ $config['pr_domains'] = [
     // ],
     // 'third.domain.com' => [
     //     'vpopmaild_admin_pass' => 'CHANGEME',
-    //     'smtp_user'   => 'alerts@thirdparty.example',
+    //     'smtp_user'   => 'alerts@thirdparty.example', // also used as From
     //     'smtp_pass'   => 'CHANGEME',
     //     'smtp_server' => 'smtp.thirdparty.example:587',
     // ],

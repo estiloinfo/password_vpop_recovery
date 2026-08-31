@@ -86,11 +86,7 @@ class password_vpop_recovery_send {
                 $subject = $this->pr->gettext('email_subject');
 
                 $smtp_account = $this->pr->resolve_smtp_account($this->user['username']);
-
-                $from = $smtp_account['from'] ?? $this->rc->config->get('pr_replyto_email');
-                if(!$from){
-                    $from = $this->get_email_from($this->rc->config->get('pr_admin_email'));
-                }
+                $from = $smtp_account['from'];
 
                 $send_email = $this->send_email(
                     $this->user['altemail'],
@@ -130,11 +126,6 @@ class password_vpop_recovery_send {
             $possible = str_replace($char,"",$possible); //removing the used character from the possible
         }
         return $code;
-    }
-
-    function get_email_from($email) {
-        $parts = explode('@',$email);
-        return 'no-reply@'.$parts[1];
     }
 
     function get_localization_dir($language) {

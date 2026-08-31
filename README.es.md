@@ -196,14 +196,19 @@ por dominio en `pr_domains` solo cuando no aplica:
   contraseña para SMTP;
 - **`smtp_auth => false`** — el relay de este dominio acepta correo sin
   autenticar (solo si tu configuración de MTA realmente lo permite y tiene
-  SPF/DKIM correctos — si no, el correo termina en spam o rebota). En este
-  caso el remitente (From/Reply-To) también pasa a usar por defecto
-  `noreply@<dominio>` en vez del `pr_replyto_email` global — un relay local
-  sin autenticación suele aceptar correo solo `FROM` su propio dominio, así
-  que un reply-to de otro dominio quedaría rechazado. Sobreescribilo con
-  `'from'` si necesitás otra cosa;
+  SPF/DKIM correctos — si no, el correo termina en spam o rebota);
 - **`smtp_server`** — el relay de este dominio es un host distinto al
   `pr_default_smtp_server` compartido.
+
+El remitente (From/Reply-To) sigue su propia precedencia, independiente de
+lo anterior: un `'from'` explícito para ese dominio, si no, el `smtp_user`
+de ese dominio si tiene uno (ya es una dirección real ahí), si no,
+`pr_replyto_email` (solo la PARTE LOCAL, default `'noreply'`) combinado con
+**el dominio que se está recuperando** — no una dirección fija única, porque
+un reply-to de otro dominio suele quedar rechazado por un relay sin
+autenticación y de paso perjudica SPF/DKIM. Poné `pr_replyto_email` como
+dirección completa (con `@`) si realmente querés una única dirección fija
+en todos lados.
 
 ### 5. Configurar `config.inc.php` del plugin
 
@@ -238,9 +243,12 @@ Completar como mínimo:
 
 | Variable | Qué es |
 |---|---|
-| `pr_replyto_email` | remitente de los correos con el código |
 | `pr_default_smtp_server` | relay SMTP compartido para dominios que no lo sobreescriban |
 | `pr_domains` | una entrada por dominio de correo, ver abajo |
+
+`pr_replyto_email` ya tiene default `'noreply'` (ver "Cuenta de envío de
+correo (SMTP)" arriba para cómo se combina con el dominio recuperado) —
+solo hace falta fijarlo si ese default no te sirve.
 
 **Configuración multi-dominio (`pr_domains`)** — una entrada por cada dominio
 de correo que atienda esta instalación:
@@ -253,13 +261,11 @@ $config['pr_domains'] = [
     'otro-dominio.com' => [
         'vpopmaild_admin_pass' => 'CAMBIAR',
         'smtp_auth' => false,                  // el relay de este dominio no exige auth
-        // 'from' por defecto queda en noreply@otro-dominio.com; se puede
-        // fijar explícitamente para sobreescribirlo (sirve para cualquier
-        // dominio, no solo este caso)
+        // From queda en noreply@otro-dominio.com (no hay smtp_user acá)
     ],
     'tercer-dominio.com' => [
         'vpopmaild_admin_pass' => 'CAMBIAR',
-        'smtp_user'   => 'alertas@terceros.example', // cuenta de envío dedicada
+        'smtp_user'   => 'alertas@terceros.example', // también se usa como From
         'smtp_pass'   => 'CAMBIAR',
         'smtp_server' => 'smtp.terceros.example:587',
     ],
