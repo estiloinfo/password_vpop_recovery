@@ -58,6 +58,17 @@ case someone bypasses JavaScript).
   `DATE_ADD`/`INTERVAL` arithmetic, and the rate-limit cleanup query — were
   verified directly against a real MariaDB instance, not just reasoned
   through)
+- **SQL driver** (`pr_password_driver = 'sql'`): exercised end-to-end against
+  a synthetic `vpopmail`-schema table on that same MariaDB instance — all
+  three hash schemes (`crypt-md5`, `crypt-blowfish`, `system`) produce a hash
+  that verifies correctly with PHP's own `crypt()`, `pr_sql_store_clear`
+  writes the plaintext column correctly, and a non-matching (user, domain)
+  correctly reports failure instead of a false success. This installation's
+  real vpopmail is CDB-backed (via `vpopmaild`), **not** SQL-backed, so this
+  could not be validated against a real vpopmail-on-MySQL install — anyone
+  using the SQL driver in production **must** verify the resulting hash
+  against their own vpopmail (e.g. compare with a password changed via
+  `vpasswd`) before trusting it — see "Password driver" below.
 
 ## Installation
 
@@ -144,28 +155,55 @@ CREATE TABLE IF NOT EXISTS password_recovery_attempts (
 silently auto-update on every row change unless explicitly told not to,
 which is not what we want for `token_validity`/`created_at`.)
 
-### 3. vpopmail admin account (needed to actually reset passwords)
+### 3. vpopmail admin accounts (one per domain)
 
 `vpopmaild` requires authenticating before it will modify an account — and a
 self-`slogin` isn't enough, because during recovery the user by definition
 doesn't have their old password. The fix is to authenticate with an account
-that has **domain-admin privileges** in vpopmail (e.g.
-`postmaster@your.domain.com`), which *can* run `mod_user` against *any*
-account in the domain.
+that has **domain-admin privileges** in vpopmail, which *can* run `mod_user`
+against *any* account in that domain — and only `postmaster@<domain>` has
+that privilege.
 
-If that account doesn't exist yet, it needs to be created/enabled on the
-mail server first.
+Because the admin **username** is therefore always `postmaster@<domain>`, it
+never needs to be configured explicitly — only that account's **password**,
+once per domain (see `pr_domains` in step 5). If `postmaster@<domain>`
+doesn't exist yet for a given domain, create/enable it on the mail server
+first.
 
 ### 4. Sending (SMTP) account
 
 The confirmation code is sent **before login**, at a point where Roundcube
 has no active IMAP session yet — so `smtp_user`/`smtp_pass = '%u'/'%p'` from
-the main config can't be reused. A dedicated, **send-only** mailbox account
-is needed, authenticated against the same institutional SMTP (don't use the
-unauthenticated local relay: without proper SPF/DKIM the mail ends up in
-spam or gets bounced).
+the main config can't be reused.
+
+By default, each domain sends its confirmation email authenticating via
+SMTP-AUTH as its own `postmaster@<domain>`, reusing the **same password**
+already configured for vpopmaild in step 3 — vpopmail shares one password
+across IMAP/POP/SMTP-AUTH for a mailbox, so in the common case there's
+nothing extra to set up here. Override this per domain in `pr_domains` only
+when it doesn't apply:
+
+- **a different, dedicated sending account** (`smtp_user`/`smtp_pass`) — the
+  usual case when Roundcube and the mail server are on separate hosts and
+  the relay you actually send through doesn't accept the postmaster's own
+  credentials, or you'd simply rather not reuse that password for SMTP;
+- **`smtp_auth => false`** — this domain's relay accepts mail unauthenticated
+  (only if your MTA setup genuinely allows it and has proper SPF/DKIM —
+  otherwise the mail ends up in spam or gets bounced). In this case the
+  From/Reply-To address also defaults to `noreply@<domain>` instead of the
+  global `pr_replyto_email` — an unauthenticated local relay commonly only
+  accepts mail `FROM` its own domain, so a cross-domain reply-to would get
+  rejected. Override it with `'from'` if you need something else;
+- **`smtp_server`** — this domain's relay is a different host from the
+  shared `pr_default_smtp_server`.
 
 ### 5. Configure the plugin's `config.inc.php`
+
+The plugin ships its own built-in defaults in `config.inc.default.php`
+(loaded automatically, first, before the real config — see its header
+comment for details). **`config.inc.php` only needs to declare secrets and
+whatever differs from those defaults** — there's no need to copy every
+setting over, and nothing to keep in sync by hand across upgrades.
 
 On Debian/Ubuntu packaged Roundcube, every plugin's `config.inc.php` under
 `/usr/share/roundcube/plugins/<name>/` is actually a symlink to a real file
@@ -190,16 +228,82 @@ Fill in at least:
 
 | Variable | What it is |
 |---|---|
-| `pr_users_table` | `'password_recovery_data'` |
-| `pr_fields` | `['altemail' => 'alt_email']` |
 | `pr_replyto_email` | sender address for the confirmation-code emails |
-| `pr_vpopmaild_admin_user` / `pr_vpopmaild_admin_pass` | admin account from step 3 |
-| `pr_default_smtp_server` / `pr_default_smtp_user` / `pr_default_smtp_pass` | account from step 4 |
-| `pr_rate_limit_account_per_day` / `pr_rate_limit_ip_per_day` | attempt limits (default 5 / 20) |
-| `pr_confirm_code_validity_time` | code validity in minutes (default 30) |
+| `pr_default_smtp_server` | shared SMTP relay for domains that don't override it |
+| `pr_domains` | one entry per mail domain, see below |
+
+**Multi-domain configuration (`pr_domains`)** — one entry per domain this
+install serves:
+
+```php
+$config['pr_domains'] = [
+    'your.domain.com' => [
+        'vpopmaild_admin_pass' => 'CHANGEME',   // postmaster@your.domain.com
+    ],
+    'other.domain.com' => [
+        'vpopmaild_admin_pass' => 'CHANGEME',
+        'smtp_auth' => false,                   // this domain's relay needs no auth
+        // 'from' defaults to noreply@other.domain.com here; set it
+        // explicitly to override (works for any domain, not just this case)
+    ],
+    'third.domain.com' => [
+        'vpopmaild_admin_pass' => 'CHANGEME',
+        'smtp_user'   => 'alerts@thirdparty.example', // dedicated sending account
+        'smtp_pass'   => 'CHANGEME',
+        'smtp_server' => 'smtp.thirdparty.example:587',
+    ],
+];
+```
+
+A single-domain install can instead use the flat legacy shorthand
+(`pr_vpopmaild_admin_pass`, `pr_default_smtp_user`, `pr_default_smtp_pass`) —
+see the comments in `config.inc.php.dist` for the exact fallback order.
+
+**Password driver (`pr_password_driver`)** — how the plugin actually resets
+the password on the mail server:
+
+| Driver | When to use it |
+|---|---|
+| `'vpopmaild'` (default) | Works with any vpopmail install, CDB or SQL-backed. Needs one postmaster password per domain (`pr_domains` above). |
+| `'sql'` | Only if vpopmail itself runs on a SQL backend (MySQL/MariaDB). Writes directly to vpopmail's own table with ONE set of DB credentials for every domain — scales much better past a handful of domains, at the cost of needing to validate the password hash against your specific vpopmail build (see below). |
+
+To use the SQL driver:
+
+```php
+$config['pr_password_driver'] = 'sql';
+// Same DSN format as Roundcube's own db_dsnw (this reuses rcube_db,
+// just pointed at vpopmail's database instead of Roundcube's own).
+$config['pr_sql_dsn'] = 'mysql://vpopmail_admin:CHANGEME@127.0.0.1/vpopmail';
+```
+
+`pr_sql_table`/`pr_sql_columns` default to vpopmail's standard MySQL schema
+(`vpopmail` table, `pw_name`/`pw_domain`/`pw_passwd`/`pw_clear_passwd`
+columns) and only need overriding if your vpopmail was compiled with a
+different one. `pr_sql_hash_scheme` (`crypt-md5` default, or
+`crypt-blowfish`/`system`) **must match how your vpopmail was compiled** —
+a mismatched scheme won't error out, it will just silently produce a
+password vchkpw can't verify. Validate it before relying on this in
+production: change a real account's password through the plugin, then
+confirm the mail server still accepts the new password for IMAP/POP login.
+
+**Don't point `pr_sql_dsn` at vpopmail's own admin account.** Create a
+dedicated MySQL/MariaDB user with the least privilege this driver actually
+needs — `UPDATE` on just the two columns it writes, nothing else (no
+`SELECT`, `INSERT`, `DELETE`, or access to any other table), scoped to the
+exact host Roundcube connects from:
+
+```sql
+CREATE USER 'rc_pwreset'@'127.0.0.1' IDENTIFIED BY 'a-long-unique-password';
+GRANT UPDATE (pw_passwd, pw_clear_passwd) ON vpopmail.vpopmail TO 'rc_pwreset'@'127.0.0.1';
+FLUSH PRIVILEGES;
+```
+
+Adjust the database/table/column names to match your schema. The host
+(`'127.0.0.1'`) should be whatever address the connection actually
+originates from as seen by MariaDB.
 
 **Important — permissions**: this file contains plaintext passwords (SMTP
-and the vpopmail admin account). Apply this on the REAL file (the one under
+and vpopmaild/SQL credentials). Apply this on the REAL file (the one under
 `/etc/roundcube/plugins/...` if you followed the symlink approach above —
 the symlink itself doesn't need special permissions, it just points there):
 

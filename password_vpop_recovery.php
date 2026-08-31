@@ -24,6 +24,10 @@ class password_vpop_recovery extends rcube_plugin {
 
     function init() {
         $this->rc = rcmail::get_instance();
+        // Built-in defaults first (versioned, no secrets), then the real
+        // per-install config.inc.php, which only needs to override what
+        // differs — see config.inc.default.php for details.
+        $this->load_config('config.inc.default.php');
         $this->load_config();
 
         if (!$this->rc->config->get('pr_use_confirm_code') && !$this->rc->config->get('pr_use_question'))
@@ -596,6 +600,68 @@ class password_vpop_recovery extends rcube_plugin {
             }
         }
         return $this->db;
+    }
+
+    /*******************
+    * multi-domain config (pr_domains)
+    *******************/
+
+    // The vpopmaild admin account for a given account's domain is never
+    // configured directly: only postmaster@<domain> has the privilege to
+    // reset another mailbox's password via vpopmaild, so the username is
+    // always derived. Only the password is per-domain data.
+    // Falls back to the flat pr_vpopmaild_admin_pass for installs that
+    // haven't migrated to pr_domains yet (single-domain, unchanged).
+    function resolve_vpopmaild_admin($username) {
+        $domain = strtolower(substr(strrchr($username, '@'), 1));
+        $entry  = $this->rc->config->get('pr_domains', [])[$domain] ?? [];
+
+        return [
+            'user' => 'postmaster@' . $domain,
+            'pass' => $entry['vpopmaild_admin_pass'] ?? $this->rc->config->get('pr_vpopmaild_admin_pass'),
+        ];
+    }
+
+    // Resolves which SMTP account/server/from-address to use to send the
+    // confirmation code for a given account's domain, in this order:
+    //   1. an explicit alternate account for that domain (pr_domains[domain]['smtp_user'])
+    //   2. that domain explicitly marked as accepting relay without auth
+    //      (pr_domains[domain]['smtp_auth'] === false)
+    //   3. the legacy global flat account (pr_default_smtp_user/pass), if set
+    //      - keeps existing single-account installs working unchanged
+    //   4. default: authenticate as that domain's own postmaster@<domain>,
+    //      reusing its vpopmaild admin password (pr_smtp_auth_default)
+    // An empty 'user' in the result means: connect without authenticating.
+    // 'from' is normally left null (caller falls back to the global
+    // pr_replyto_email/pr_admin_email) unless pr_domains[domain]['from'] is
+    // set, EXCEPT for the unauthenticated cases (2 and the final fallback),
+    // where it defaults to noreply@<domain> - an unauthenticated local relay
+    // commonly only accepts mail FROM its own domain, so the global reply-to
+    // (which may belong to a different domain entirely) would get rejected.
+    function resolve_smtp_account($username) {
+        $domain = strtolower(substr(strrchr($username, '@'), 1));
+        $entry  = $this->rc->config->get('pr_domains', [])[$domain] ?? [];
+        $server = $entry['smtp_server'] ?? $this->rc->config->get('pr_default_smtp_server');
+        $from   = $entry['from'] ?? null;
+
+        if (!empty($entry['smtp_user'])) {
+            return ['server' => $server, 'user' => $entry['smtp_user'], 'pass' => $entry['smtp_pass'] ?? '', 'from' => $from];
+        }
+
+        if (isset($entry['smtp_auth']) && $entry['smtp_auth'] === false) {
+            return ['server' => $server, 'user' => '', 'pass' => '', 'from' => $from ?: ('noreply@' . $domain)];
+        }
+
+        if ($global_user = $this->rc->config->get('pr_default_smtp_user')) {
+            return ['server' => $server, 'user' => $global_user, 'pass' => $this->rc->config->get('pr_default_smtp_pass'), 'from' => $from];
+        }
+
+        if ($this->rc->config->get('pr_smtp_auth_default', true)) {
+            $admin = $this->resolve_vpopmaild_admin($username);
+            return ['server' => $server, 'user' => $admin['user'], 'pass' => $admin['pass'], 'from' => $from];
+        }
+
+        return ['server' => $server, 'user' => '', 'pass' => '', 'from' => $from ?: ('noreply@' . $domain)];
     }
 
     function get_action() {

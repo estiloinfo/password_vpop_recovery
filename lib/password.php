@@ -23,6 +23,7 @@ class password_vpop_recovery_pwd {
     private $rc;
     private $pr;
     private $drivers = [];
+    private $sql_db;
 
     function __construct($pr_plugin) {
         $this->pr = $pr_plugin;
@@ -71,13 +72,14 @@ class password_vpop_recovery_pwd {
         // Password recovery never has the user's current password (that's the
         // whole point). The 'vpopmaild' driver's protocol requires the user to
         // self-authenticate with their CURRENT password before it allows a
-        // change, so a plain driver->save('', ...) always fails here. When a
-        // vpopmail domain-admin account is configured, use it to reset the
-        // target user's password instead (vpopmaild allows an admin session
-        // to run mod_user on any user in its domain).
-        if ($this->rc->config->get('password_driver') == 'vpopmaild'
-            && $this->rc->config->get('pr_vpopmaild_admin_user')
-        ) {
+        // change, so a plain driver->save('', ...) always fails here.
+        // pr_password_driver (separate from the core 'password' plugin's own
+        // password_driver) chooses how THIS plugin resets it instead.
+        $pr_driver = $this->rc->config->get('pr_password_driver', 'vpopmaild');
+
+        if ($pr_driver === 'sql') {
+            $result = $this->_save_sql($passwd, $username);
+        } elseif ($pr_driver === 'vpopmaild') {
             $result = $this->_save_vpopmaild_admin($passwd, $username);
         } else {
             if (!($driver = $this->_load_driver())) {
@@ -126,10 +128,11 @@ class password_vpop_recovery_pwd {
     // in its domain, unlike a self-login which only works for your own account).
     private function _save_vpopmaild_admin($passwd, $username)
     {
-        $host       = $this->rc->config->get('password_vpopmaild_host');
-        $port       = $this->rc->config->get('password_vpopmaild_port');
-        $admin_user = $this->rc->config->get('pr_vpopmaild_admin_user');
-        $admin_pass = $this->rc->config->get('pr_vpopmaild_admin_pass');
+        $host  = $this->rc->config->get('password_vpopmaild_host');
+        $port  = $this->rc->config->get('password_vpopmaild_port');
+        $admin = $this->pr->resolve_vpopmaild_admin($username);
+        $admin_user = $admin['user'];
+        $admin_pass = $admin['pass'];
 
         $sock = new Net_Socket();
         $result = $sock->connect($host, $port, null);
@@ -166,6 +169,99 @@ class password_vpop_recovery_pwd {
         }
 
         return PASSWORD_SUCCESS;
+    }
+
+    // Alternative to vpopmaild for installs where vpopmail itself runs on a
+    // SQL backend: write the new password hash directly into vpopmail's own
+    // table instead of going through the vpopmaild daemon. One set of DB
+    // credentials covers every domain, which scales far better than a
+    // postmaster password per domain - but the hash MUST exactly match what
+    // vpopmail's own vchkpw expects, which depends on how that specific
+    // vpopmail was compiled (see README: "SQL driver" for how to verify this
+    // against your install before relying on it in production).
+    //
+    // Reuses rcube_db - the same DB layer/pattern the plugin already uses
+    // for password_recovery_data (see get_user_props/set_user_props) -
+    // instead of talking to PDO directly, so DSN format, placeholders and
+    // error handling stay consistent across the whole plugin. It's a SEPARATE
+    // rcube_db instance (not $this->rc->db) because vpopmail's SQL table
+    // normally lives on a different database/server than Roundcube's own.
+    private function _save_sql($passwd, $username)
+    {
+        $dsn = $this->rc->config->get('pr_sql_dsn');
+        if (!$dsn) {
+            rcube::raise_error([
+                    'code' => 600, 'file' => __FILE__, 'line' => __LINE__,
+                    'message' => "password_vpop_recovery: pr_password_driver='sql' but pr_sql_dsn is not configured"
+                ], true, false
+            );
+            return PASSWORD_CONNECT_ERROR;
+        }
+
+        $parts  = explode('@', $username, 2);
+        $user   = $parts[0] ?? '';
+        $domain = strtolower($parts[1] ?? '');
+
+        if (empty($this->sql_db)) {
+            $this->sql_db = new rcube_db($dsn);
+        }
+        $db = $this->sql_db;
+
+        $table   = $this->rc->config->get('pr_sql_table', 'vpopmail');
+        $columns = $this->rc->config->get('pr_sql_columns', []) + [
+            'user' => 'pw_name', 'domain' => 'pw_domain',
+            'passwd' => 'pw_passwd', 'clear_passwd' => 'pw_clear_passwd',
+        ];
+
+        $sets   = ["{$columns['passwd']} = ?"];
+        $params = [$this->_hash_password($passwd)];
+
+        if ($this->rc->config->get('pr_sql_store_clear', false)) {
+            $sets[] = "{$columns['clear_passwd']} = ?";
+            $params[] = $passwd;
+        }
+
+        $sql = "UPDATE $table SET " . implode(', ', $sets)
+             . " WHERE {$columns['user']} = ? AND {$columns['domain']} = ?";
+        $params[] = $user;
+        $params[] = $domain;
+
+        $result = $db->query($sql, $params);
+
+        if ($db->is_error($result)) {
+            rcube::write_log('errors', 'password_vpop_recovery sql driver: ' . $db->is_error($result));
+            return $db->is_connected() ? PASSWORD_ERROR : PASSWORD_CONNECT_ERROR;
+        }
+
+        // A fresh random salt is used every time, so the new hash can never
+        // equal the stored one - 0 rows affected reliably means no row
+        // matched (user, domain), not "value unchanged".
+        return $db->affected_rows($result) >= 1 ? PASSWORD_SUCCESS : PASSWORD_ERROR;
+    }
+
+    // Hashes a password the way vpopmail itself would store it, per
+    // pr_sql_hash_scheme. MUST be validated against your own vpopmail
+    // install (compare against a password change made with vpasswd/vuserinfo)
+    // before trusting this in production - see README.
+    private function _hash_password($passwd)
+    {
+        $scheme = $this->rc->config->get('pr_sql_hash_scheme', 'crypt-md5');
+
+        switch ($scheme) {
+            case 'crypt-blowfish':
+                $salt = '$2y$10$' . substr(strtr(base64_encode(random_bytes(16)), '+', '.'), 0, 22);
+                return crypt($passwd, $salt);
+            case 'crypt-md5':
+                $salt = '$1$' . substr(strtr(base64_encode(random_bytes(6)), '+', '.'), 0, 8) . '$';
+                return crypt($passwd, $salt);
+            case 'system':
+            default:
+                // Traditional DES crypt: PHP requires an explicit salt since
+                // PHP 8 (crypt($passwd) alone is an ArgumentCountError now).
+                $alphabet = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+                $salt = $alphabet[random_int(0, 63)] . $alphabet[random_int(0, 63)];
+                return crypt($passwd, $salt);
+        }
     }
 
     function _load_driver($type = 'password')
