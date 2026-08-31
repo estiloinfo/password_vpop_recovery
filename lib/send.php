@@ -85,7 +85,9 @@ class password_vpop_recovery_send {
                 $body = strtr(file_get_contents($file), ['[LINK]' => $link, '[CODE]' => $confirm_code]);
                 $subject = $this->pr->gettext('email_subject');
 
-                $from = $this->rc->config->get('pr_replyto_email');
+                $smtp_account = $this->pr->resolve_smtp_account($this->user['username']);
+
+                $from = $smtp_account['from'] ?? $this->rc->config->get('pr_replyto_email');
                 if(!$from){
                     $from = $this->get_email_from($this->rc->config->get('pr_admin_email'));
                 }
@@ -95,7 +97,7 @@ class password_vpop_recovery_send {
                     $from,
                     $subject,
                     $body,
-                    $this->pr->resolve_smtp_account($this->user['username'])
+                    $smtp_account
                 );
             }
 

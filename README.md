@@ -189,7 +189,11 @@ when it doesn't apply:
   credentials, or you'd simply rather not reuse that password for SMTP;
 - **`smtp_auth => false`** — this domain's relay accepts mail unauthenticated
   (only if your MTA setup genuinely allows it and has proper SPF/DKIM —
-  otherwise the mail ends up in spam or gets bounced);
+  otherwise the mail ends up in spam or gets bounced). In this case the
+  From/Reply-To address also defaults to `noreply@<domain>` instead of the
+  global `pr_replyto_email` — an unauthenticated local relay commonly only
+  accepts mail `FROM` its own domain, so a cross-domain reply-to would get
+  rejected. Override it with `'from'` if you need something else;
 - **`smtp_server`** — this domain's relay is a different host from the
   shared `pr_default_smtp_server`.
 
@@ -239,6 +243,8 @@ $config['pr_domains'] = [
     'other.domain.com' => [
         'vpopmaild_admin_pass' => 'CHANGEME',
         'smtp_auth' => false,                   // this domain's relay needs no auth
+        // 'from' defaults to noreply@other.domain.com here; set it
+        // explicitly to override (works for any domain, not just this case)
     ],
     'third.domain.com' => [
         'vpopmaild_admin_pass' => 'CHANGEME',
@@ -279,6 +285,22 @@ a mismatched scheme won't error out, it will just silently produce a
 password vchkpw can't verify. Validate it before relying on this in
 production: change a real account's password through the plugin, then
 confirm the mail server still accepts the new password for IMAP/POP login.
+
+**Don't point `pr_sql_dsn` at vpopmail's own admin account.** Create a
+dedicated MySQL/MariaDB user with the least privilege this driver actually
+needs — `UPDATE` on just the two columns it writes, nothing else (no
+`SELECT`, `INSERT`, `DELETE`, or access to any other table), scoped to the
+exact host Roundcube connects from:
+
+```sql
+CREATE USER 'rc_pwreset'@'127.0.0.1' IDENTIFIED BY 'a-long-unique-password';
+GRANT UPDATE (pw_passwd, pw_clear_passwd) ON vpopmail.vpopmail TO 'rc_pwreset'@'127.0.0.1';
+FLUSH PRIVILEGES;
+```
+
+Adjust the database/table/column names to match your schema. The host
+(`'127.0.0.1'`) should be whatever address the connection actually
+originates from as seen by MariaDB.
 
 **Important — permissions**: this file contains plaintext passwords (SMTP
 and vpopmaild/SQL credentials). Apply this on the REAL file (the one under

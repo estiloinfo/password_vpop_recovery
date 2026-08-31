@@ -30,6 +30,11 @@ $config['pr_default_smtp_server'] = 'ssl://smtp.your.domain.com:465';
 //   'smtp_user' / 'smtp_pass' - use a different, dedicated sending account
 //   'smtp_auth' => false      - this domain's relay accepts mail unauthenticated
 //   'smtp_server'             - this domain's relay is a different host
+//   'from'                    - override the From/Reply-To address (default:
+//                                pr_replyto_email, EXCEPT when smtp_auth is
+//                                false, where it defaults to noreply@<domain>
+//                                instead - an unauthenticated relay commonly
+//                                only accepts mail FROM its own domain)
 //
 // See README.md, "Multi-domain configuration", for the full precedence order.
 $config['pr_domains'] = [
@@ -38,7 +43,7 @@ $config['pr_domains'] = [
     ],
     // 'other.domain.com' => [
     //     'vpopmaild_admin_pass' => 'CHANGEME',
-    //     'smtp_auth' => false,
+    //     'smtp_auth' => false, // From defaults to noreply@other.domain.com
     // ],
     // 'third.domain.com' => [
     //     'vpopmaild_admin_pass' => 'CHANGEME',

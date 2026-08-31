@@ -61,10 +61,12 @@ $config['pr_sql_columns'] = [
     'passwd'       => 'pw_passwd',
     'clear_passwd' => 'pw_clear_passwd',
 ];
+
 // 'crypt-md5', 'crypt-blowfish' or 'system' (PHP crypt() with no explicit
 // salt, i.e. whatever the OS's default scheme is). MUST match how your
 // vpopmail was compiled - see README, "SQL driver".
 $config['pr_sql_hash_scheme'] = 'crypt-md5';
+
 // Whether to also write the plaintext password into pw_clear_passwd
 // (needed only for APOP/CRAM-MD5; leave false unless you know you need it).
 $config['pr_sql_store_clear'] = false;

@@ -196,7 +196,12 @@ por dominio en `pr_domains` solo cuando no aplica:
   contraseña para SMTP;
 - **`smtp_auth => false`** — el relay de este dominio acepta correo sin
   autenticar (solo si tu configuración de MTA realmente lo permite y tiene
-  SPF/DKIM correctos — si no, el correo termina en spam o rebota);
+  SPF/DKIM correctos — si no, el correo termina en spam o rebota). En este
+  caso el remitente (From/Reply-To) también pasa a usar por defecto
+  `noreply@<dominio>` en vez del `pr_replyto_email` global — un relay local
+  sin autenticación suele aceptar correo solo `FROM` su propio dominio, así
+  que un reply-to de otro dominio quedaría rechazado. Sobreescribilo con
+  `'from'` si necesitás otra cosa;
 - **`smtp_server`** — el relay de este dominio es un host distinto al
   `pr_default_smtp_server` compartido.
 
@@ -248,6 +253,9 @@ $config['pr_domains'] = [
     'otro-dominio.com' => [
         'vpopmaild_admin_pass' => 'CAMBIAR',
         'smtp_auth' => false,                  // el relay de este dominio no exige auth
+        // 'from' por defecto queda en noreply@otro-dominio.com; se puede
+        // fijar explícitamente para sobreescribirlo (sirve para cualquier
+        // dominio, no solo este caso)
     ],
     'tercer-dominio.com' => [
         'vpopmaild_admin_pass' => 'CAMBIAR',
@@ -291,6 +299,21 @@ vchkpw no puede verificar. Validalo antes de confiar en esto en producción:
 cambiá la contraseña de una cuenta real a través del plugin, y confirmá que
 el servidor de correo sigue aceptando la nueva contraseña para login
 IMAP/POP.
+
+**No apuntes `pr_sql_dsn` a la cuenta admin de vpopmail.** Creá un usuario
+de MySQL/MariaDB dedicado, con el mínimo privilegio que este driver
+realmente necesita — `UPDATE` sobre las dos columnas que escribe, nada más
+(sin `SELECT`, `INSERT`, `DELETE`, ni acceso a ninguna otra tabla), acotado
+al host exacto desde donde se conecta Roundcube:
+
+```sql
+CREATE USER 'rc_pwreset'@'127.0.0.1' IDENTIFIED BY 'una-clave-larga-y-unica';
+GRANT UPDATE (pw_passwd, pw_clear_passwd) ON vpopmail.vpopmail TO 'rc_pwreset'@'127.0.0.1';
+FLUSH PRIVILEGES;
+```
+
+Ajustá base/tabla/columnas a tu esquema real. El host (`'127.0.0.1'`) debe
+ser la dirección desde la que MariaDB realmente ve llegar la conexión.
 
 **Importante — permisos**: este archivo contiene contraseñas en texto plano
 (la del SMTP y las credenciales de vpopmaild/SQL). Aplicá esto sobre el
