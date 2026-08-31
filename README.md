@@ -60,8 +60,8 @@ case someone bypasses JavaScript).
   through)
 - **SQL driver** (`pr_password_driver = 'sql'`): exercised end-to-end against
   a synthetic `vpopmail`-schema table on that same MariaDB instance — all
-  three hash schemes (`crypt-md5`, `crypt-blowfish`, `system`) produce a hash
-  that verifies correctly with PHP's own `crypt()`, `pr_sql_store_clear`
+  four hash schemes (`crypt-md5`, `crypt-blowfish`, `sha512-crypt`, `system`)
+  produce a hash that verifies correctly with PHP's own `crypt()`, `pr_sql_store_clear`
   writes the plaintext column correctly, and a non-matching (user, domain)
   correctly reports failure instead of a false success. This installation's
   real vpopmail is CDB-backed (via `vpopmaild`), **not** SQL-backed, so this
@@ -286,8 +286,9 @@ $config['pr_sql_dsn'] = 'mysql://vpopmail_admin:CHANGEME@127.0.0.1/vpopmail';
 `pr_sql_table`/`pr_sql_columns` default to vpopmail's standard MySQL schema
 (`vpopmail` table, `pw_name`/`pw_domain`/`pw_passwd`/`pw_clear_passwd`
 columns) and only need overriding if your vpopmail was compiled with a
-different one. `pr_sql_hash_scheme` (`crypt-md5` default, or
-`crypt-blowfish`/`system`) **must match how your vpopmail was compiled** —
+different one. `pr_sql_hash_scheme` (`sha512-crypt` default, or
+`crypt-md5`/`crypt-blowfish`/`system`) **must match how your vpopmail was
+compiled/patched** —
 a mismatched scheme won't error out, it will just silently produce a
 password vchkpw can't verify. Validate it before relying on this in
 production: change a real account's password through the plugin, then

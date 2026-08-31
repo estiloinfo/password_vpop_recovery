@@ -245,11 +245,14 @@ class password_vpop_recovery_pwd {
     // before trusting this in production - see README.
     private function _hash_password($passwd)
     {
-        $scheme = $this->rc->config->get('pr_sql_hash_scheme', 'crypt-md5');
+        $scheme = $this->rc->config->get('pr_sql_hash_scheme', 'sha512-crypt');
 
         switch ($scheme) {
             case 'crypt-blowfish':
                 $salt = '$2y$10$' . substr(strtr(base64_encode(random_bytes(16)), '+', '.'), 0, 22);
+                return crypt($passwd, $salt);
+            case 'sha512-crypt':
+                $salt = '$6$' . substr(strtr(base64_encode(random_bytes(12)), '+', '.'), 0, 16) . '$';
                 return crypt($passwd, $salt);
             case 'crypt-md5':
                 $salt = '$1$' . substr(strtr(base64_encode(random_bytes(6)), '+', '.'), 0, 8) . '$';

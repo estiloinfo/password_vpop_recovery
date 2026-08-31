@@ -62,8 +62,8 @@ evita el JavaScript).
   MariaDB, no solo por análisis de sintaxis)
 - **Driver SQL** (`pr_password_driver = 'sql'`): probado de punta a punta
   contra una tabla sintética con el esquema de `vpopmail` en esa misma
-  MariaDB — los tres esquemas de hash (`crypt-md5`, `crypt-blowfish`,
-  `system`) producen un hash que verifica correctamente con el `crypt()` de
+  MariaDB — los cuatro esquemas de hash (`crypt-md5`, `crypt-blowfish`,
+  `sha512-crypt`, `system`) producen un hash que verifica correctamente con el `crypt()` de
   PHP, `pr_sql_store_clear` escribe bien la columna en texto plano, y un
   (usuario, dominio) que no matchea reporta error en vez de un falso éxito.
   El vpopmail real de esta instalación es CDB-backed (vía `vpopmaild`), **no**
@@ -298,8 +298,9 @@ $config['pr_sql_dsn'] = 'mysql://vpopmail_admin:CAMBIAR@127.0.0.1/vpopmail';
 de vpopmail (tabla `vpopmail`, columnas
 `pw_name`/`pw_domain`/`pw_passwd`/`pw_clear_passwd`) y solo hace falta
 sobreescribirlos si tu vpopmail se compiló con uno distinto.
-`pr_sql_hash_scheme` (`crypt-md5` por default, o `crypt-blowfish`/`system`)
-**tiene que coincidir con cómo se compiló tu vpopmail** — un esquema que no
+`pr_sql_hash_scheme` (`sha512-crypt` por default, o
+`crypt-md5`/`crypt-blowfish`/`system`)
+**tiene que coincidir con cómo se compiló/parchó tu vpopmail** — un esquema que no
 coincide no da error, simplemente produce en silencio una contraseña que
 vchkpw no puede verificar. Validalo antes de confiar en esto en producción:
 cambiá la contraseña de una cuenta real a través del plugin, y confirmá que
