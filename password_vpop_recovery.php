@@ -382,9 +382,15 @@ class password_vpop_recovery extends rcube_plugin {
 
         if ($type != 'error') {
             $this->rc->kill_session();
-            $this->rc->output->command('redirect', './', 2);
-//            $this->rc->output->send('login');
+            // command('redirect', url, N) does NOT delay N seconds - redirect()'s
+            // second arg is a boolean 'lock' flag, not a timeout, so a numeric N
+            // is truthy and it navigates immediately, before display_message's
+            // queued message ever gets a chance to render. A real setTimeout is
+            // the only way to actually wait before redirecting.
+            $this->rc->output->add_script("setTimeout(function(){ rcmail.redirect('./'); }, 2000);", 'docready');
         }
+
+        $this->rc->output->send('plugin');
     }
 
     /*******************

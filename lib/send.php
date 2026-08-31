@@ -31,21 +31,21 @@ class password_vpop_recovery_send {
 
         $txt_body  = "--=_$ctb\r\n";
         $txt_body .= "\r\n";
-        $txt_body .= "Content-Transfer-Encoding: 7bit\r\n";
-        $txt_body .= "Content-Type: text/plain; charset=" . $this->rc->config->get('default_charset', RCUBE_CHARSET) . "\r\n";
+        $txt_body .= "Content-Transfer-Encoding: quoted-printable\r\n";
+        $txt_body .= "Content-Type: text/plain; charset=" . RCUBE_CHARSET . "\r\n";
 
         $h2t = new rcube_html2text($body, false, true, 0);
         $txt = rcube_mime::wordwrap($h2t->get_text(), $this->rc->config->get('line_length', 75), "\r\n");
         $txt = wordwrap($txt, 998, "\r\n", true);
-        $txt_body .= "$txt\r\n";
+        $txt_body .= quoted_printable_encode($txt) . "\r\n";
         $txt_body .= "--=_$ctb";
         $txt_body .= "\r\n";
 
         $msg_body = "Content-Type: multipart/alternative; boundary=\"=_$ctb\"\r\n\r\n";
         $msg_body .= $txt_body;
         $msg_body .= "Content-Transfer-Encoding: quoted-printable\r\n";
-        $msg_body .= "Content-Type: text/html; charset=" . $this->rc->config->get('default_charset', RCUBE_CHARSET) . "\r\n\r\n";
-        $msg_body .= str_replace("=","=3D",$body);
+        $msg_body .= "Content-Type: text/html; charset=" . RCUBE_CHARSET . "\r\n\r\n";
+        $msg_body .= quoted_printable_encode($body);
         $msg_body .= "\r\n\r\n";
         $msg_body .= "--=_$ctb--";
         $msg_body .= "\r\n\r\n";
