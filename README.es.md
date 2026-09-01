@@ -7,9 +7,11 @@ cuando olvidó la contraseña, sin intervención de un administrador.
 
 Esta es una adaptación del plugin original
 ([AlfnRU/roundcube-password_recovery](https://github.com/AlfnRU/roundcube-password_recovery))
-para esta instalación puntual: backend **vpopmail** (vía `vpopmaild`) en vez de
-una base Postfix/MySQL, con verificación de dos datos, límite de intentos real
-y política de contraseña con feedback visual.
+para esta instalación puntual: backend **vpopmail** en vez de una base
+Postfix/MySQL — reseteando la contraseña real vía `vpopmaild` (default) o
+directo contra la tabla SQL propia de vpopmail (ver "Driver de contraseña"
+más abajo) — con verificación de dos datos, límite de intentos real y
+política de contraseña con feedback visual.
 
 ## Cómo funciona
 
@@ -23,9 +25,11 @@ y política de contraseña con feedback visual.
 4. El usuario ingresa el código junto con la nueva contraseña. El campo de
    contraseña muestra en vivo si cumple la política exigida, y el botón
    "Guardar" queda deshabilitado hasta que se cumplan todas las condiciones.
-5. Al guardar, el plugin cambia la contraseña real de la cuenta autenticándose
-   contra `vpopmaild` con una cuenta de administrador de dominio (ver más
-   abajo) — el usuario nunca necesita su contraseña anterior.
+5. Al guardar, el plugin cambia la contraseña real de la cuenta — por
+   defecto, autenticándose contra `vpopmaild` con una cuenta de
+   administrador de dominio (ver más abajo), o escribiendo directo en la
+   tabla SQL de vpopmail si `pr_password_driver = 'sql'` (ver "Driver de
+   contraseña") — el usuario nunca necesita su contraseña anterior.
 
 **Por diseño, la respuesta que ve el usuario es siempre la misma** sin
 importar si la cuenta no existe, si el correo de recuperación no coincide, o

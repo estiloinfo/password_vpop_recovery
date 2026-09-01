@@ -7,9 +7,11 @@ forgetting their password, with no administrator involved.
 
 This is an adaptation of the original plugin
 ([AlfnRU/roundcube-password_recovery](https://github.com/AlfnRU/roundcube-password_recovery))
-for this specific installation: **vpopmail** backend (via `vpopmaild`)
-instead of a Postfix/MySQL database, with two-factor verification, real rate
-limiting, and a password policy with live visual feedback.
+for this specific installation: a **vpopmail** backend instead of a
+Postfix/MySQL database — resetting the actual password via `vpopmaild`
+(default) or directly through vpopmail's own SQL table (see "Password
+driver" below) — with two-factor verification, real rate limiting, and a
+password policy with live visual feedback.
 
 ## How it works
 
@@ -22,9 +24,11 @@ limiting, and a password policy with live visual feedback.
 4. The user enters the code along with a new password. The password field
    shows live feedback on whether it meets the required policy, and the
    "Save" button stays disabled until every condition is met.
-5. On save, the plugin changes the account's real password by authenticating
-   against `vpopmaild` with a domain-admin account (see below) — the user
-   never needs their previous password.
+5. On save, the plugin changes the account's real password — by default,
+   authenticating against `vpopmaild` with a domain-admin account (see
+   below), or by writing directly to vpopmail's SQL table if
+   `pr_password_driver = 'sql'` (see "Password driver") — the user never
+   needs their previous password.
 
 **By design, the response the user sees is always the same** regardless of
 whether the account doesn't exist, the recovery email doesn't match, or the
