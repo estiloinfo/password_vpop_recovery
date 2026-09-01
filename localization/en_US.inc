@@ -30,9 +30,9 @@ $labels['password_inconsistency']   = 'Password and confirmation do not match';
 $labels['password_too_short']       = 'The password must be at least %d characters long.';
 $labels['password_too_long']        = 'The password must be at most %d characters long.';
 $labels['policy_length']            = 'Between %d and %d characters';
-$labels['policy_digit']             = 'At least one number';
-$labels['policy_special']           = 'At least one special character';
-$labels['policy_match']             = 'Passwords match';
+$labels['policy_digit']             = 'The password must contain at least one number';
+$labels['policy_special']           = 'The password must contain at least one special character';
+$labels['policy_match']             = 'Passwords must match';
 
 $messages['disabled']               = 'The system is currently being maintained and password recovery is not possible. Everything should return to normal soon. We apologize for the inconvenience.';
 $messages['banned']                 = 'Access is temporarily blocked (too many failed login attempts). Please try again later or contact your administrator.';
