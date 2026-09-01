@@ -44,6 +44,13 @@ saltarse este límite. Por defecto:
 - máximo **20 intentos por IP de origen** cada 24hs (protege contra un mismo
   origen probando muchas cuentas distintas).
 
+Las filas más viejas que `pr_recovery_attempts_retention_days` (default
+**7 días**) se borran de forma oportunista en ~1 de cada 200 intentos, así
+la tabla nunca crece sin límite y no hace falta un cron. Es puramente una
+decisión de cada admin entre historial de auditoría y tamaño de tabla — se
+puede bajar hasta un piso de 1 día (menos que eso arriesgaría borrar filas
+que los chequeos de rate-limit de 24hs todavía necesitan).
+
 ### Política de contraseña
 
 La nueva contraseña debe tener entre 8 y 16 caracteres (configurable, ver

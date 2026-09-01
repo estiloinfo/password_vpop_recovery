@@ -276,9 +276,14 @@ class password_vpop_recovery extends rcube_plugin {
         $table = $this->rc->config->get('pr_recovery_attempts_table', 'password_recovery_attempts');
         $this->db->query("INSERT INTO $table (username, ip) VALUES (?, ?)", (string) $username, (string) $ip);
 
-        // opportunistic cleanup of old rows, no cron needed
+        // opportunistic cleanup of old rows, no cron needed. Retention is
+        // configurable (pr_recovery_attempts_retention_days) so each admin
+        // can trade off audit history vs. table size - floored at 1 day so
+        // it can never eat into the 24h window rate_limit_exceeded() itself
+        // relies on.
         if (random_int(1, 200) === 1) {
-            $cutoff = ($this->db->db_provider === 'mysql') ? "NOW() - INTERVAL 7 DAY" : "NOW() - INTERVAL '7 days'";
+            $days = max(1, (int) $this->rc->config->get('pr_recovery_attempts_retention_days', 7));
+            $cutoff = ($this->db->db_provider === 'mysql') ? "NOW() - INTERVAL $days DAY" : "NOW() - INTERVAL '$days days'";
             $this->db->query("DELETE FROM $table WHERE created_at < $cutoff");
         }
     }

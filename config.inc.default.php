@@ -95,6 +95,14 @@ $config['pr_recovery_attempts_table'] = 'password_recovery_attempts';
 $config['pr_rate_limit_account_per_day'] = 5;
 $config['pr_rate_limit_ip_per_day'] = 20;
 
+// How long to keep rows in pr_recovery_attempts_table before they're
+// opportunistically deleted (each insert has a 1-in-200 chance of also
+// running the cleanup, so no cron is needed). Floored at 1 day - the
+// rate-limit checks above only look back 24h, so anything shorter would
+// risk deleting rows the rate limit itself still needs. Longer than that
+// is purely an audit-trail vs. table-size tradeoff for the admin to make.
+$config['pr_recovery_attempts_retention_days'] = 7;
+
 // Logging
 $config['pr_password_log'] = true;
 $config['pr_debug'] = false;

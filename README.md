@@ -42,6 +42,13 @@ script that doesn't keep a session cookie can't bypass this limit. Defaults:
 - max **20 attempts per source IP** per 24h (protects against one source
   probing many different accounts).
 
+Rows older than `pr_recovery_attempts_retention_days` (default **7 days**)
+get opportunistically deleted on ~1 in 200 attempts, so the table never
+grows unbounded without needing a cron job. This is purely an audit-trail
+vs. table-size tradeoff — set it to whatever fits your retention policy,
+down to a floor of 1 day (going lower would risk deleting rows the 24h
+rate-limit checks above still need).
+
 ### Password policy
 
 The new password must be 8–16 characters long (configurable, see the
